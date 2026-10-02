@@ -1,4 +1,5 @@
 import logging
+import os
 import textwrap
 
 from dotenv import load_dotenv
@@ -13,7 +14,7 @@ from livekit.agents import (
     inference,
     room_io,
 )
-from livekit.plugins import ai_coustics
+from livekit.plugins import ai_coustics, anam
 
 logger = logging.getLogger("agent")
 
@@ -134,6 +135,17 @@ async def my_agent(ctx: JobContext):
         ),
     )
 
+    avatar_id = os.getenv("ANAM_AVATAR_ID")
+    if avatar_id and os.getenv("ANAM_API_KEY"):
+        avatar = anam.AvatarSession(
+            persona_config=anam.PersonaConfig(name="Mon avatar", avatarId=avatar_id),
+        )
+        await avatar.start(session, room=ctx.room)
+    else:
+        logger.warning(
+            "Anam avatar disabled: set ANAM_AVATAR_ID and ANAM_API_KEY in .env.local"
+        )
+
     # Start the session, which initializes the voice pipeline and warms up the models
     await session.start(
         agent=Assistant(),
@@ -146,17 +158,6 @@ async def my_agent(ctx: JobContext):
             ),
         ),
     )
-
-    # # Add a virtual avatar to the session, if desired
-    # # For other providers, see https://docs.livekit.io/agents/models/avatar/
-    # avatar = anam.AvatarSession(
-    #     persona_config=anam.PersonaConfig(
-    #         name="...",
-    #         avatarId="...",  # See https://docs.livekit.io/agents/models/avatar/plugins/anam
-    #     ),
-    # )
-    # # Start the avatar and wait for it to join
-    # await avatar.start(session, room=ctx.room)
 
     # Join the room and connect to the user
     await ctx.connect()
